@@ -1,5 +1,6 @@
 import wx
 from Halma import Halma
+import time
 
 GREEN_SELECTED = -2
 GREEN = -1
@@ -116,7 +117,9 @@ class Frame(wx.Frame):
         prev_y = self.selected[1]
 
         if self.halma.board[x][y] == self.halma.current:
-            self.halma.findAllMoves(x, y)
+            self.halma.movesList = self.halma.findAllMoves(x, y)
+            self.SetStatusText(["Green", "Red"][self.halma.current == RED] +
+                               f" token selected at ({chr(x + 97)}, {y})")
 
         if self.halma.board[x][y] == self.halma.current:
             if self.halma.board[prev_x][prev_y] == GREEN_SELECTED:
@@ -138,15 +141,31 @@ class Frame(wx.Frame):
         if (x, y) not in self.halma.movesList:
             event.Skip()
         else:
+            self.SetStatusText(["Green", "Red"][self.halma.current == RED] +
+                               f" moved from ({chr(self.selected[0] + 97)}, {self.selected[1]})"
+                               f" to ({chr(x + 97)}, {y})")
             self.swap(x, y)
             self.selected = (-1, -1)
             self.halma.movesList = []
             self.halma.turns += 1
             self.halma.switchTurns()
-            color, is_win = self.halma.checkForWin()
+            color, is_win = self.halma.checkForWin(self.halma.board)
             if is_win:
                 self.displayWinner(color)
             self.panel.Refresh()
+
+            self.SetStatusText("Computer is thinking...")
+            self.halma.computerMove()
+            self.selected = (-1, -1)
+            self.halma.movesList = []
+            self.halma.turns += 1
+            self.halma.switchTurns()
+            color, is_win = self.halma.checkForWin(self.halma.board)
+            if is_win:
+                self.displayWinner(color)
+            self.panel.Refresh()
+
+
 
     def displayWinner(self, color):
         print(color)
@@ -175,6 +194,8 @@ class Frame(wx.Frame):
     def getClickLoc(self, event):
         winx, winy = event.GetX(), event.GetY()
         w, h = self.panel.GetSize()
+        w -= 110
+        h -= 110
         x = winx / (w / self.halma.size)
         y = winy / (h / self.halma.size)
 
@@ -187,8 +208,10 @@ class Frame(wx.Frame):
     def Refresh(self, event):
         dc = wx.AutoBufferedPaintDCFactory(self.panel)
         dc = wx.GCDC(dc)
-        self.SetStatusText("Current player is " + ["Green", "Red"][self.halma.current == RED])
+        #self.SetStatusText("Current player is " + ["Green", "Red"][self.halma.current == RED])
         w, h = self.panel.GetSize()
+        w -= 110
+        h -= 110
 
         dc.SetBrush(wx.Brush("white"))
         dc.DrawRectangle(0, 0, w, h)
@@ -215,7 +238,7 @@ class Frame(wx.Frame):
                    GREEN_SELECTED: wx.Brush("#58ffdf") }
         for i in range(self.size):
             for j in range(self.size):
-                c = self.halma[i][j]
+                c = self.halma.board[i][j]
                 if c != BLANK:
                     dc.SetBrush(brushes[c])
                     dc.DrawEllipse(i * px, j * py, px, py)
@@ -225,3 +248,19 @@ class Frame(wx.Frame):
                 elif (i, j) in self.halma.movesList:
                     dc.SetBrush(wx.Brush("red"))
                     dc.DrawCircle(i * px + px / 2, j * py + py / 2, 3)
+
+
+        count = 0
+        font = wx.Font(26, family=wx.FONTFAMILY_MODERN, style=0, weight=90,
+                       underline=False, faceName="", encoding=wx.FONTENCODING_DEFAULT)
+        dc.SetFont(font)
+        while count < self.size:
+            dc.SetBrush(wx.Brush("white"))
+            dc.DrawRectangle(self.size * px, count * py, px, py)
+            dc.DrawRectangle(count * px, self.size * py, px, py)
+
+            dc.SetBrush(wx.Brush("black"))
+            dc.DrawText(str(count), (self.size * px), (count * py))
+            dc.DrawText((chr(count + 97)), (count * px), (self.size * py))
+
+            count += 1

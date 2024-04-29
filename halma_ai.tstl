@@ -1,0 +1,23 @@
+@import Halma
+@import math
+@import random
+
+<@
+def shuffleBoard(halma):
+    for i in halma.board:
+        random.shuffle(i)
+@>
+
+pool: <halma> 10
+
+property: <halma>.maxUtility - <halma>.chosenUtility < 100
+
+actions:
+
+<halma> = Halma.Halma()
+
+shuffleBoard(<halma>)
+
+<halma>.computerMove()
+
+log: <halma>.stats.printStats()
